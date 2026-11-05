@@ -59,4 +59,20 @@ public class MeasurementDecoderTest {
         MeasurementDecoder.DecodeResult result = decoder.acceptKeyCode(KeyEvent.KEYCODE_ENTER);
         assertEquals("1.2", result.value);
     }
+
+    @Test public void recoversDecimalWhenTabletDropsSeparatorEvent() {
+        MeasurementDecoder decoder = new MeasurementDecoder();
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_2);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_4);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_4);
+        MeasurementDecoder.DecodeResult result = decoder.acceptKeyCode(KeyEvent.KEYCODE_ENTER);
+        assertEquals("2.44", result.value);
+
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_MINUS);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_1);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_8);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_1);
+        result = decoder.acceptKeyCode(KeyEvent.KEYCODE_ENTER);
+        assertEquals("-1.81", result.value);
+    }
 }

@@ -18,7 +18,8 @@ public final class MeasurementDecoder {
         // Android may report a physical decimal key as PERIOD, COMMA or NUMPAD_DOT.
         if (keyCode == KeyEvent.KEYCODE_PERIOD
             || keyCode == KeyEvent.KEYCODE_COMMA
-            || keyCode == KeyEvent.KEYCODE_NUMPAD_DOT) {
+            || keyCode == KeyEvent.KEYCODE_NUMPAD_DOT
+            || keyCode == KeyEvent.KEYCODE_NUMPAD_COMMA) {
             buffer.append('.');
             return DecodeResult.inProgress(buffer.toString());
         }
@@ -32,11 +33,27 @@ public final class MeasurementDecoder {
         if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
             String value = buffer.toString();
             buffer.setLength(0);
-            return VALID_READING.matcher(value).matches()
-                ? DecodeResult.complete(value)
+            String recovered = recoverMissingDecimal(value);
+            return VALID_READING.matcher(recovered).matches()
+                ? DecodeResult.complete(recovered)
                 : DecodeResult.invalid(value);
         }
         return DecodeResult.ignored(buffer.toString());
+    }
+
+    /**
+     * The iGaging keyboard normally sends two digits after the decimal point.
+     * Some Android tablets drop that separator event entirely, so recover only
+     * the unambiguous three-digit form at ENTER: 244 -> 2.44, -181 -> -1.81.
+     */
+    private String recoverMissingDecimal(String value) {
+        if (value.matches("-?\\d{3}")) {
+            boolean negative = value.charAt(0) == '-';
+            String digits = negative ? value.substring(1) : value;
+            String recovered = digits.substring(0, 1) + "." + digits.substring(1);
+            return negative ? "-" + recovered : recovered;
+        }
+        return value;
     }
 
     private int digitFor(int keyCode) {
