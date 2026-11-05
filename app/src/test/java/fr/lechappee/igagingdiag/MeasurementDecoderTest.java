@@ -38,4 +38,25 @@ public class MeasurementDecoderTest {
         assertEquals(MeasurementDecoder.DecodeResult.Type.INVALID,
             decoder.acceptKeyCode(KeyEvent.KEYCODE_ENTER).type);
     }
+
+    @Test public void acceptsAlternatePhysicalDecimalKeys() {
+        MeasurementDecoder decoder = new MeasurementDecoder();
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_NUMPAD_0);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_NUMPAD_DOT);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_NUMPAD_0);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_NUMPAD_5);
+        MeasurementDecoder.DecodeResult result =
+            decoder.acceptKeyCode(KeyEvent.KEYCODE_NUMPAD_ENTER);
+        assertEquals(MeasurementDecoder.DecodeResult.Type.COMPLETE, result.type);
+        assertEquals("0.05", result.value);
+    }
+
+    @Test public void treatsCommaReportedByAzertyAsDecimalSeparator() {
+        MeasurementDecoder decoder = new MeasurementDecoder();
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_1);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_COMMA);
+        decoder.acceptKeyCode(KeyEvent.KEYCODE_2);
+        MeasurementDecoder.DecodeResult result = decoder.acceptKeyCode(KeyEvent.KEYCODE_ENTER);
+        assertEquals("1.2", result.value);
+    }
 }

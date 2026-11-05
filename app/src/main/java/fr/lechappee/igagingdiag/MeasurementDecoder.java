@@ -10,22 +10,26 @@ public final class MeasurementDecoder {
     private final StringBuilder buffer = new StringBuilder();
 
     public DecodeResult acceptKeyCode(int keyCode) {
-        if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
-            buffer.append((char) ('0' + keyCode - KeyEvent.KEYCODE_0));
+        int digit = digitFor(keyCode);
+        if (digit >= 0) {
+            buffer.append((char) ('0' + digit));
             return DecodeResult.inProgress(buffer.toString());
         }
-        if (keyCode == KeyEvent.KEYCODE_PERIOD) {
+        // Android may report a physical decimal key as PERIOD, COMMA or NUMPAD_DOT.
+        if (keyCode == KeyEvent.KEYCODE_PERIOD
+            || keyCode == KeyEvent.KEYCODE_COMMA
+            || keyCode == KeyEvent.KEYCODE_NUMPAD_DOT) {
             buffer.append('.');
             return DecodeResult.inProgress(buffer.toString());
         }
-        if (keyCode == KeyEvent.KEYCODE_MINUS) {
+        if (keyCode == KeyEvent.KEYCODE_MINUS || keyCode == KeyEvent.KEYCODE_NUMPAD_SUBTRACT) {
             buffer.append('-');
             return DecodeResult.inProgress(buffer.toString());
         }
         if (keyCode == KeyEvent.KEYCODE_SPACE) {
             return DecodeResult.ignored(buffer.toString());
         }
-        if (keyCode == KeyEvent.KEYCODE_ENTER) {
+        if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
             String value = buffer.toString();
             buffer.setLength(0);
             return VALID_READING.matcher(value).matches()
@@ -33,6 +37,16 @@ public final class MeasurementDecoder {
                 : DecodeResult.invalid(value);
         }
         return DecodeResult.ignored(buffer.toString());
+    }
+
+    private int digitFor(int keyCode) {
+        if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
+            return keyCode - KeyEvent.KEYCODE_0;
+        }
+        if (keyCode >= KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= KeyEvent.KEYCODE_NUMPAD_9) {
+            return keyCode - KeyEvent.KEYCODE_NUMPAD_0;
+        }
+        return -1;
     }
 
     public String getBuffer() {
