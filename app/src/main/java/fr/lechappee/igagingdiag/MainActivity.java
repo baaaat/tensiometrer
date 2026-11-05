@@ -25,14 +25,10 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 /** Diagnostic only. Measures are kept exactly as transmitted by the HID keyboard. */
 public class MainActivity extends Activity {
     private static final String ACTION_PERMISSION = "fr.lechappee.igagingdiag.USB_PERMISSION";
-    private static final Pattern MEASUREMENT =
-        Pattern.compile("-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)");
-
     private UsbManager manager;
     private TextView details, lastMeasurement, measurementHistory, log;
     private UsbDevice selected;
@@ -41,10 +37,10 @@ public class MainActivity extends Activity {
     private volatile boolean reading;
     private Thread worker;
     private final StringBuilder technicalHistory = new StringBuilder();
-    private final StringBuilder measurementBuffer = new StringBuilder();
     private final StringBuilder acceptedMeasurements = new StringBuilder();
     private final SimpleDateFormat clock = new SimpleDateFormat("HH:mm:ss.SSS", Locale.FRANCE);
     private boolean technicalLogEnabled = true;
+    private final MeasurementDecoder measurementDecoder = new MeasurementDecoder();
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
@@ -279,7 +275,13 @@ public class MainActivity extends Activity {
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         if ((event.getSource() & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
-                handleMeasurementKey(event.getKeyCode());
+                MeasurementDecoder.DecodeResult result =
+                    measurementDecoder.acceptKeyCode(event.getKeyCode());
+                if (result.type == MeasurementDecoder.DecodeResult.Type.COMPLETE) {
+                    acceptMeasurement(result.value);
+                } else if (result.type == MeasurementDecoder.DecodeResult.Type.INVALID) {
+                    technical("Mesure invalide ignoree avant ENTER : [" + result.value + "]");
+                }
                 technical("KEY keyCode=" + event.getKeyCode() + " scanCode=" + event.getScanCode()
                     + " source=" + event.getSource());
             }
@@ -288,27 +290,7 @@ public class MainActivity extends Activity {
         return super.dispatchKeyEvent(event);
     }
 
-    private void handleMeasurementKey(int keyCode) {
-        if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
-            measurementBuffer.append((char) ('0' + keyCode - KeyEvent.KEYCODE_0));
-        } else if (keyCode == KeyEvent.KEYCODE_PERIOD) {
-            measurementBuffer.append('.');
-        } else if (keyCode == KeyEvent.KEYCODE_MINUS) {
-            measurementBuffer.append('-');
-        } else if (keyCode == KeyEvent.KEYCODE_SPACE) {
-            // Spaces are framing noise and are deliberately ignored.
-        } else if (keyCode == KeyEvent.KEYCODE_ENTER) {
-            acceptMeasurement();
-        }
-    }
-
-    private void acceptMeasurement() {
-        String value = measurementBuffer.toString();
-        measurementBuffer.setLength(0);
-        if (!MEASUREMENT.matcher(value).matches()) {
-            technical("Mesure invalide ignoree avant ENTER : [" + value + "]");
-            return;
-        }
+    private void acceptMeasurement(String value) {
         String line = clock.format(new Date()) + "  " + value + '\n';
         acceptedMeasurements.append(line);
         runOnUiThread(() -> {
