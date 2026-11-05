@@ -14,13 +14,15 @@ import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.io.IOException;
+import java.util.Set;
 import java.util.Locale;
 
 /** First screen: validates wheel parameters before starting the acquisition screen. */
 public class ConfigurationActivity extends Activity {
     private EditText title;
-    private EditText leftSpoke;
-    private EditText rightSpoke;
+    private Spinner leftSpoke;
+    private Spinner rightSpoke;
     private EditText rightTarget;
     private EditText ratio;
     private Spinner spokeCount;
@@ -38,9 +40,11 @@ public class ConfigurationActivity extends Activity {
         title = textField("Nom du montage", "Client / roue / reference atelier");
         root.addView(title);
         root.addView(label("Tensiometre : Wheel Fanatyk Digital / iGaging USB", 16));
-        leftSpoke = textField("Rayon gauche", "Categorie et epaisseur de la table officielle");
-        rightSpoke = textField("Rayon droit", "Categorie et epaisseur de la table officielle");
+        root.addView(label("Rayon gauche (table Wheel Fanatyk)", 16));
+        leftSpoke = categorySpinner();
         root.addView(leftSpoke);
+        root.addView(label("Rayon droit (table Wheel Fanatyk)", 16));
+        rightSpoke = categorySpinner();
         root.addView(rightSpoke);
 
         LinearLayout row = new LinearLayout(this);
@@ -103,6 +107,20 @@ public class ConfigurationActivity extends Activity {
         return field;
     }
 
+    private Spinner categorySpinner() {
+        Spinner spinner = new Spinner(this);
+        String[] categories;
+        try {
+            Set<String> available = new CalibrationConverter(getAssets()).categories();
+            categories = available.toArray(new String[0]);
+        } catch (IOException error) {
+            categories = new String[] { "Table indisponible" };
+        }
+        spinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item,
+            categories));
+        return spinner;
+    }
+
     private RadioButton radio(String value, boolean checked) {
         RadioButton button = new RadioButton(this);
         button.setText(value);
@@ -126,7 +144,7 @@ public class ConfigurationActivity extends Activity {
             double target = Double.parseDouble(rightTarget.getText().toString().replace(',', '.'));
             double percentage = Double.parseDouble(ratio.getText().toString().replace(',', '.'));
             WheelConfig config = new WheelConfig(title.getText().toString(),
-                leftSpoke.getText().toString(), rightSpoke.getText().toString(), count,
+                leftSpoke.getSelectedItem().toString(), rightSpoke.getSelectedItem().toString(), count,
                 firstSide.getCheckedRadioButtonId() == 2
                     ? WheelConfig.FirstSide.LEFT : WheelConfig.FirstSide.RIGHT,
                 target, percentage);
