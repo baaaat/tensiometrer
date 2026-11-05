@@ -73,8 +73,16 @@ public class MainActivity extends Activity {
         outer.addView(title);
 
         TextView help = new TextView(this);
+        String configuredTitle = getIntent().getStringExtra("title");
+        int configuredCount = getIntent().getIntExtra("spokeCount", 0);
+        double configuredRightTarget = getIntent().getDoubleExtra("rightTarget", 0);
+        double configuredRatio = getIntent().getDoubleExtra("leftRatio", 0);
+        String sessionSummary = configuredTitle == null ? ""
+            : "\nMontage : " + configuredTitle + " | " + configuredCount + " rayons"
+            + String.format(Locale.FRANCE, " | Cibles D %.2f kgf / G %.2f kgf",
+                configuredRightTarget, configuredRightTarget * configuredRatio / 100.0);
         help.setText("Brancher iGaging avec USB OTG, detecter puis autoriser.\n"
-            + "Les mesures sont validees uniquement a la reception de ENTER.");
+            + "Les mesures sont validees uniquement a la reception de ENTER." + sessionSummary);
         outer.addView(help);
 
         Button scan = new Button(this);
