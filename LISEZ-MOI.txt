@@ -1,0 +1,21 @@
+iGaging USB Diagnostic 0.1 — SOURCE ANDROID (PAS UN APK)
+
+Objectif: identifier VID/PID/interfaces et tenter de lire des paquets USB directement.
+L'application journalise aussi les événements clavier Android, avec keyCode et scanCode.
+Elle ne reconstruit PAS les décimales: rien n'est présumé sur le protocole iGaging.
+
+Installation/compilation:
+1. Installer Android Studio sur un PC Windows.
+2. Décompresser ce dossier et l'ouvrir dans Android Studio (Open).
+3. Laisser Android Studio télécharger Gradle/SDK nécessaires.
+4. Build > Build APK(s); récupérer app-debug.apk dans app/build/outputs/apk/debug/.
+5. Installer l'APK sur la tablette (autoriser temporairement les installations depuis le gestionnaire de fichiers).
+6. Brancher iGaging via adaptateur OTG, ouvrir l'app, appuyer sur Détecter USB puis Autoriser et capturer HID.
+7. Appuyer sur la pédale; comparer une lecture connue à la sortie HEX et KEY.
+
+ATTENTION
+- Ce code n'a pas été compilé/testé sur une tablette réelle dans cet environnement.
+- Il sélectionne le premier périphérique USB découvert; débrancher les autres périphériques USB pendant le test.
+- Android peut refuser claimInterface() ou accéder à certains claviers HID; ce refus est une information de diagnostic.
+- Si une interface HID est capturée, ses événements peuvent ne plus atteindre les autres applications pendant la capture.
+- Pour un rapport exploitable, envoyer une capture montrant VID/PID, interfaces/endpoints, et les premières lignes HEX après mesure.
