@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
     private final SimpleDateFormat clock = new SimpleDateFormat("HH:mm:ss.SSS", Locale.FRANCE);
     private boolean technicalLogEnabled = true;
     private final MeasurementDecoder measurementDecoder = new MeasurementDecoder();
+    private WheelSurveySession survey;
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
@@ -77,6 +78,8 @@ public class MainActivity extends Activity {
         int configuredCount = getIntent().getIntExtra("spokeCount", 0);
         double configuredRightTarget = getIntent().getDoubleExtra("rightTarget", 0);
         double configuredRatio = getIntent().getDoubleExtra("leftRatio", 0);
+        createSurveyIfConfigured(configuredTitle, configuredCount, configuredRightTarget,
+            configuredRatio);
         String sessionSummary = configuredTitle == null ? ""
             : "\nMontage : " + configuredTitle + " | " + configuredCount + " rayons"
             + String.format(Locale.FRANCE, " | Cibles D %.2f kgf / G %.2f kgf",
@@ -299,13 +302,42 @@ public class MainActivity extends Activity {
     }
 
     private void acceptMeasurement(String value) {
-        String line = clock.format(new Date()) + "  " + value + '\n';
+        String line;
+        if (survey != null) {
+            MeasurementRecord record = survey.accept(value, System.currentTimeMillis());
+            String kgf = record.tensionKgf == null
+                ? "hors table" : String.format(Locale.FRANCE, "%.2f kgf", record.tensionKgf);
+            line = clock.format(new Date()) + "  " + record.side + " rayon "
+                + record.spokeNumber + "  transmis=" + record.rawReading
+                + "  corrige=" + record.correctedReading + "  " + kgf + '\n';
+        } else {
+            line = clock.format(new Date()) + "  transmis=" + value + '\n';
+        }
         acceptedMeasurements.append(line);
         runOnUiThread(() -> {
             lastMeasurement.setText(value);
             measurementHistory.setText(acceptedMeasurements.toString());
         });
         technical("Mesure valide : " + value);
+    }
+
+    private void createSurveyIfConfigured(String title, int spokeCount,
+                                          double rightTarget, double ratio) {
+        String leftCategory = getIntent().getStringExtra("leftSpoke");
+        String rightCategory = getIntent().getStringExtra("rightSpoke");
+        String firstSide = getIntent().getStringExtra("firstSide");
+        if (title == null || leftCategory == null || rightCategory == null || spokeCount == 0) {
+            return;
+        }
+        try {
+            WheelConfig config = new WheelConfig(title, leftCategory, rightCategory, spokeCount,
+                "LEFT".equals(firstSide) ? WheelConfig.FirstSide.LEFT : WheelConfig.FirstSide.RIGHT,
+                rightTarget, ratio);
+            survey = new WheelSurveySession(config,
+                new CalibrationConverter(getAssets()));
+        } catch (Exception error) {
+            technical("Session non initialisee : " + error.getMessage());
+        }
     }
 
     private void technical(String line) {
